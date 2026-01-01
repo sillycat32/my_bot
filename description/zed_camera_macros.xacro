@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!--
+    Macro to add a ZED camera using the zed_wrapper's zed_macro.urdf.xacro.
+    This keeps the main robot file clean — call with desired parameters.
+  -->
+
+  <!-- Use the zed_wrapper-provided macro now that it's installed -->
+  <xacro:include filename="$(find zed_wrapper)/urdf/zed_macro.urdf.xacro"/>
+
+  <xacro:macro name="add_zed_camera" params="camera_name camera_model custom_baseline enable_gnss gnss_x gnss_y gnss_z">
+    <!-- Do not pass an inner origin to the upstream macro (it may create its own gnss origin);
+         instead we attach the camera to `chassis` below to control positioning. -->
+    <!-- Pass the origin block into the upstream macro so it creates the expected GNSS joint.
+         Also add a simple fixed mount joint to attach the camera to the `chassis` link
+         so the robot has a single root. The mount joint is guarded by a unique name
+         to avoid duplicate-joint collisions across multiple macro invocations. -->
+    <xacro:zed_camera name="${camera_name}" model="${camera_model}" custom_baseline="${custom_baseline}" enable_gnss="${enable_gnss}">
+      <origin xyz="${gnss_x} ${gnss_y} ${gnss_z}" rpy="0 0 0"/>
+    </xacro:zed_camera>
+
+    <!-- Attach camera to chassis to avoid multiple root links -->
+    <joint name="${camera_name}_auto_mount_joint" type="fixed">
+      <parent link="chassis"/>
+      <child link="${camera_name}_camera_link"/>
+      <!-- place camera at mount origin (no rotation) -->
+      <origin xyz="${gnss_x} ${gnss_y} ${gnss_z}" rpy="0 0 0"/>
+    </joint>
+
+      <!-- Visible marker to show camera position in Gazebo (useful while plugins disabled) -->
+      <link name="${camera_name}_visual_marker">
+        <visual>
+          <origin xyz="0 0 0.03" rpy="0 0 0"/>
+          <geometry>
+            <box size="0.06 0.03 0.02"/>
+          </geometry>
+          <material name="red"/>
+        </visual>
+      </link>
+      <joint name="${camera_name}_visual_marker_joint" type="fixed">
+        <parent link="${camera_name}_camera_link"/>
+        <child link="${camera_name}_visual_marker"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+      </joint>
+
+    <!-- Re-enabled Gazebo plugin blocks with conservative settings (lower resolution and update rate).
+         If gzserver crashes, re-disable and enable plugins one-by-one to isolate. -->
+
+    <!-- Left camera sensor -->
+    <gazebo reference="${camera_name}_left_camera_frame">
+      <sensor name="${camera_name}_left_camera" type="camera">
+        <update_rate>5</update_rate>
+        <pose>0 0 0 0 0 0</pose>
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>360</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+        </camera>
+        <plugin name="${camera_name}_left_cam_plugin" filename="libgazebo_ros_camera.so">
+          <ros>
+            <namespace>/</namespace>
+            <remapping>~/image_raw:=/${camera_name}/left/image_raw</remapping>
+            <remapping>~/image_rect:=/${camera_name}/left/image_rect_color</remapping>
+            <remapping>~/camera_info:=/${camera_name}/left/camera_info</remapping>
+          </ros>
+          <frameName>${camera_name}_left_camera_frame</frameName>
+          <output>sensor_msgs/msg/Image</output>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+    <!-- Right camera sensor -->
+    <gazebo reference="${camera_name}_right_camera_frame">
+      <sensor name="${camera_name}_right_camera" type="camera">
+        <update_rate>5</update_rate>
+        <pose>0 0 0 0 0 0</pose>
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>360</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+        </camera>
+        <plugin name="${camera_name}_right_cam_plugin" filename="libgazebo_ros_camera.so">
+          <ros>
+            <namespace>/</namespace>
+            <remapping>~/image_raw:=/${camera_name}/right/image_raw</remapping>
+            <remapping>~/image_rect:=/${camera_name}/right/image_rect_color</remapping>
+            <remapping>~/camera_info:=/${camera_name}/right/camera_info</remapping>
+          </ros>
+          <frameName>${camera_name}_right_camera_frame</frameName>
+          <output>sensor_msgs/msg/Image</output>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+    <!-- Depth / disparity sensor attached to camera center (produces depth/disparity topics) -->
+    <gazebo reference="${camera_name}_camera_center">
+      <sensor name="${camera_name}_depth_sensor" type="depth">
+        <update_rate>5</update_rate>
+        <pose>0 0 0 0 0 0</pose>
+        <depth>
+          <min>0.1</min>
+          <max>100</max>
+        </depth>
+        <plugin name="${camera_name}_depth_plugin" filename="libgazebo_ros_camera.so">
+          <ros>
+            <namespace>/</namespace>
+            <remapping>~/depth/image_raw:=/${camera_name}/depth/image_raw</remapping>
+            <remapping>~/depth/disparity:=/${camera_name}/depth/disparity</remapping>
+            <remapping>~/depth/camera_info:=/${camera_name}/depth/camera_info</remapping>
+          </ros>
+          <frameName>${camera_name}_camera_center</frameName>
+          <output>sensor_msgs/msg/Image</output>
+        </plugin>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+
+</robot>

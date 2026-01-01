@@ -1,0 +1,102 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Simplified local implementation of the `zed_camera` macro.
+       This provides a minimal camera mount/link so the robot URDF can be
+       generated without the external `zed_wrapper` package. It accepts a
+       child `origin` block to position the camera mount relative to the
+       parent (chassis).
+  -->
+
+  <xacro:macro name="zed_camera" params="name model custom_baseline enable_gnss *origin">
+
+    <!-- Mount link attached to chassis -->
+    <link name="${name}_mount"/>
+    <joint name="${name}_mount_joint" type="fixed">
+      <parent link="chassis"/>
+      <child link="${name}_mount"/>
+      <origin>
+        <xacro:insert_block name="origin"/>
+      </origin>
+    </joint>
+
+    <!-- Camera body link -->
+    <link name="${name}_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.06 0.04 0.03"/>
+        </geometry>
+        <material name="black"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.06 0.04 0.03"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Fixed joint from mount to camera body -->
+    <joint name="${name}_camera_joint" type="fixed">
+      <parent link="${name}_mount"/>
+      <child link="${name}_link"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Gazebo camera sensors (left/right) with a basic ROS camera plugin configuration -->
+    <gazebo reference="${name}_link">
+      <!-- Left camera -->
+      <sensor name="${name}_left_camera" type="camera">
+        <pose>0.02 0.02 0 0 0 0</pose>
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+        </camera>
+        <plugin name="${name}_left_camera_controller" filename="libgazebo_ros_camera.so">
+          <ros>
+            <namespace>/</namespace>
+            <remapping>~/image_raw:=/${name}/left/image_raw</remapping>
+          </ros>
+          <frameName>${name}_left_camera_frame</frameName>
+          <output>sensor_msgs/Image</output>
+        </plugin>
+      </sensor>
+
+      <!-- Right camera -->
+      <sensor name="${name}_right_camera" type="camera">
+        <pose>0.02 -0.02 0 0 0 0</pose>
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+        </camera>
+        <plugin name="${name}_right_camera_controller" filename="libgazebo_ros_camera.so">
+          <ros>
+            <namespace>/</namespace>
+            <remapping>~/image_raw:=/${name}/right/image_raw</remapping>
+          </ros>
+          <frameName>${name}_right_camera_frame</frameName>
+          <output>sensor_msgs/Image</output>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

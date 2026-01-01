@@ -3,4 +3,10 @@
 
     <xacro:include filename="robot_core.xacro"/>
     <xacro:include filename="gazebo_control.xacro"/>
+    <xacro:include filename="lidar.xacro"/>
+    <xacro:include filename="zed_camera_macros.xacro"/>
+
+    <!-- Instantiate the ZED camera. Adjust args as needed. -->
+    <!-- Place ZED toward the front of the chassis (move forward on X). -->
+    <xacro:add_zed_camera camera_name="zed2" camera_model="zed2" custom_baseline="0.0" enable_gnss="false" gnss_x="0.4" gnss_y="0.0" gnss_z="0.15"/>
 </robot>

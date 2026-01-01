@@ -25,7 +25,7 @@ endif()
 
 
 install(
-  DIRECTORY  description launch 
+  DIRECTORY  description launch worlds
   DESTINATION share/${PROJECT_NAME}
 )
 
